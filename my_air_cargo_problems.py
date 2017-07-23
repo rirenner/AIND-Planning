@@ -1,3 +1,6 @@
+import sys
+sys.path.append('/src')
+
 from aimacode.logic import PropKB
 from aimacode.planning import Action
 from aimacode.search import (
@@ -8,6 +11,8 @@ from lp_utils import (
     FluentState, encode_state, decode_state,
 )
 from my_planning_graph import PlanningGraph
+
+# from run_search import run_search
 
 from functools import lru_cache
 
@@ -47,6 +52,30 @@ class AirCargoProblem(Problem):
         list<Action>
             list of Action objects
         """
+        precond_pos = [expr("At(Cargo, Airport)"), expr("At(Plane, Airport)")]
+        precond_neg = []
+        effect_add = [expr("In(Cargo, Plane)")]
+        effect_rem = [expr("At(Cargo, Airport)")]
+        load_action = Action(expr("Load(Cargo, Plane, Airport)"),
+                            [precond_pos, precond_neg],
+                            [effect_add, effect_rem])
+
+        precond_pos = [expr("In(Cargo, Plane)"), expr("At(Plane, Airport)")]
+        precond_neg = []
+        effect_add = [expr("At(Cargo, Airport)")]
+        effect_rem = [expr("In(Cargo, Plane)")]
+        load_action = Action(expr("Unload(Cargo, Plane, Airport)"),
+                            [precond_pos, precond_neg],
+                            [effect_add, effect_rem])
+
+        precond_pos = [expr("At(Plane, Airport)"), expr("At(Plane, Airport)")]
+        precond_neg = []
+        effect_add = [expr("At(Plane, Airport)")]
+        effect_rem = [expr("At(Plane, Airport)")]
+        load_action = Action(expr("Fly(Plane, Airport, Airport)"),
+                            [precond_pos, precond_neg],
+                            [effect_add, effect_rem])
+
 
         # TODO create concrete Action objects based on the domain action schema for: Load, Unload, and Fly
         # concrete actions definition: specific literal action that does not include variables as with the schema
@@ -61,6 +90,19 @@ class AirCargoProblem(Problem):
             """
             loads = []
             # TODO create all load ground actions from the domain Load action
+            for a in self.airports:
+                for p in self.planes:
+                    for c in self.cargos:
+                        precond_pos = [expr("At({}, {})".format(p, a)),
+                                        expr("At({}, {})".format(c, a))]
+                        precond_neg = []
+                        effect_add = [expr("In({}, {})".format(c, p))]
+                        effect_rem = [expr("At({}, {})".format(c, a))]
+                        load = Action(expr("Load({}, {}, {})".format(c, p, a)),
+                                     [precond_pos, precond_neg],
+                                     [effect_add, effect_rem])
+                        loads.append(load)
+
             return loads
 
         def unload_actions():
@@ -70,6 +112,19 @@ class AirCargoProblem(Problem):
             """
             unloads = []
             # TODO create all Unload ground actions from the domain Unload action
+            for a in self.airports:
+                for p in self.planes:
+                    for c in self.cargos:
+                        precond_pos = [expr("In({}, {})".format(c, p)),
+                                        expr("At({}, {})".format(p, a))]
+                        precond_neg = []
+                        effect_add = [expr("At({}, {})".format(c, a))]
+                        effect_rem = [expr("In({}, {})".format(c, p))]
+                        unload = Action(expr("Unload({}, {}, {})".format(c, p, a)),
+                                     [precond_pos, precond_neg],
+                                     [effect_add, effect_rem])
+                        unloads.append(unload)
+
             return unloads
 
         def fly_actions():
@@ -105,6 +160,18 @@ class AirCargoProblem(Problem):
         """
         # TODO implement
         possible_actions = []
+        kb = PropKB()
+        kb.tell(decode_state(state, self.state_map).pos_sentence())
+        for action in self.actions_list:
+            is_possible = True
+            for clause in action.precond_pos:
+                if clause not in kb.clauses:
+                    is_possible = False
+            for clause in action.precond_neg:
+                if clause in kb.clauses:
+                    is_possible = False
+            if is_possible:
+                possible_actions.append(action)
         return possible_actions
 
     def result(self, state: str, action: Action):
@@ -118,6 +185,20 @@ class AirCargoProblem(Problem):
         """
         # TODO implement
         new_state = FluentState([], [])
+        old_state = decode_state(state, self.state_map)
+        for fluent in old_state.pos:
+            if fluent not in action.effect_rem:
+                new_state.pos.append(fluent)
+        for fluent in action.effect_add:
+            if fluent not in new_state.pos:
+                new_state.pos.append(fluent)
+        for fluent in old_state.neg:
+            if fluent not in action.effect_add:
+                new_state.neg.append(fluent)
+        for fluent in action.effect_rem:
+            if fluent not in new_state.neg:
+                new_state.neg.append(fluent)
+
         return encode_state(new_state, self.state_map)
 
     def goal_test(self, state: str) -> bool:
@@ -195,3 +276,34 @@ def air_cargo_p2() -> AirCargoProblem:
 def air_cargo_p3() -> AirCargoProblem:
     # TODO implement Problem 3 definition
     pass
+
+if __name__ == '__main__':
+    p = air_cargo_p1()
+    print("**** Air Cargo example problem setup ****")
+    print("Initial state for this problem is {}".format(p.initial))
+    print("Actions for this domain are:")
+    for a in p.actions_list:
+        print('   {}{}'.format(a.name, a.args))
+    print("Fluents in this problem are:")
+    for f in p.state_map:
+        print('   {}'.format(f))
+    print("Goal requirement for this problem are:")
+    for g in p.goal:
+        print('   {}'.format(g))
+    print()
+    print("*** Breadth First Search")
+    run_search(p, breadth_first_search)
+    print("*** Depth First Search")
+    run_search(p, depth_first_graph_search)
+    print("*** Uniform Cost Search")
+    run_search(p, uniform_cost_search)
+    print("*** Greedy Best First Graph Search - null heuristic")
+    run_search(p, greedy_best_first_graph_search, parameter=p.h_1)
+    """
+    print("*** A-star null heuristic")
+    run_search(p, astar_search, p.h_1)
+    print("A-star ignore preconditions heuristic")
+    rs(p, "astar_search - ignore preconditions heuristic", astar_search, p.h_ignore_preconditions)
+    print(""A-star levelsum heuristic)
+    rs(p, "astar_search - levelsum heuristic", astar_search, p.h_pg_levelsum)
+    """

@@ -1,3 +1,5 @@
+import sys
+sys.path.append('.')
 from aimacode.logic import PropKB
 from aimacode.planning import Action
 from aimacode.search import (
@@ -5,9 +7,7 @@ from aimacode.search import (
     uniform_cost_search, greedy_best_first_graph_search, Problem,
 )
 from aimacode.utils import expr
-from lp_utils import (
-    FluentState, encode_state, decode_state
-)
+from lp_utils import FluentState, encode_state, decode_state
 from my_planning_graph import PlanningGraph
 from run_search import run_search
 
@@ -137,8 +137,8 @@ if __name__ == '__main__':
     run_search(p, uniform_cost_search)
     print("*** Greedy Best First Graph Search - null heuristic")
     run_search(p, greedy_best_first_graph_search, parameter=p.h_1)
-    print("*** A-star null heuristic")
-    run_search(p, astar_search, p.h_1)
+    # print("*** A-star null heuristic")
+    # run_search(p, astar_search, p.h_1)
     # print("A-star ignore preconditions heuristic")
     # rs(p, "astar_search - ignore preconditions heuristic", astar_search, p.h_ignore_preconditions)
     # print(""A-star levelsum heuristic)
