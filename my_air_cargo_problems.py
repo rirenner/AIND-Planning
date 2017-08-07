@@ -16,6 +16,9 @@ from my_planning_graph import PlanningGraph
 
 from functools import lru_cache
 
+from pprint import pprint as pp
+def jfp(obj):
+    return pp([x for x in dir(obj) if not x.startswith('_')])
 
 class AirCargoProblem(Problem):
     def __init__(self, cargos, planes, airports, initial: FluentState, goal: list):
@@ -230,6 +233,27 @@ class AirCargoProblem(Problem):
         """
         # TODO implement (see Russell-Norvig Ed-3 10.2.3  or Russell-Norvig Ed-2 11.2)
         count = 0
+        # possible_actions = self.actions(node.state)
+        # possible_actions = list()
+        kb = PropKB()
+        kb.tell(decode_state(node.state, self.state_map).pos_sentence())
+        for gclause in self.goal:
+            if gclause not in  kb.clauses:
+                count += 1
+        """
+            t = action
+            t.precond_neg = []
+            t.precond_pos = []
+            possible_actions.append(t)
+
+        for possible_action in possible_actions:
+            # if self.goal(self.result(node.state, x)):
+            paa = possible_action.act(kb, possible_action.args)
+            import pdb; pdb.set_trace()
+
+            count += 1
+        import pdb; pdb.set_trace()
+        """
         return count
 
 
@@ -277,7 +301,6 @@ def air_cargo_p2() -> AirCargoProblem:
            expr('In(C3, P1)'),
            expr('In(C3, P2)'),
            expr('In(C3, P3)'),
-           expr('At(C3, SFO)'),
            expr('At(C1, JFK)'),
            expr('In(C1, P1)'),
            expr('In(C1, P2)'),
@@ -285,6 +308,12 @@ def air_cargo_p2() -> AirCargoProblem:
            expr('At(P1, JFK)'),
            expr('At(P2, SFO)'),
            expr('At(P3, SFO)'),
+           expr('At(C1, ATL)'),
+           expr('At(C2, ATL)'),
+           expr('At(C3, JFK)'),
+           expr('At(P1, ATL)'),
+           expr('At(P2, ATL)'),
+           expr('At(P3, JFK)'),
            ]
     init = FluentState(pos, neg)
     goal = [expr('At(C1, JFK)'),
@@ -318,6 +347,18 @@ def air_cargo_p3() -> AirCargoProblem:
            expr('In(C4, P2)'),
            expr('At(P1, JFK)'),
            expr('At(P2, SFO)'),
+           expr('At(C1, ATL)'),
+           expr('At(C1, ORD)'),
+           expr('At(C2, ATL)'),
+           expr('At(C2, ORD)'),
+           expr('At(C3, ORD)'),
+           expr('At(C3, SFO)'),
+           expr('At(C4, ATL)'),
+           expr('At(C4, JFK)'),
+           expr('At(P1, ATL)'),
+           expr('At(P1, ORD)'),
+           expr('At(P2, ATL)'),
+           expr('At(P2, ORD)'),
            ]
     init = FluentState(pos, neg)
     goal = [expr('At(C1, JFK)'),
